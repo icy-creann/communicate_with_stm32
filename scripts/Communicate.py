@@ -1,6 +1,6 @@
 """
-该模块用于与STM32F103C8T6通过串口通信。
-
+该模块用于与STM32通过串口通信。
+author:icy
 """
 import serial
 import glob
