@@ -96,7 +96,7 @@ class Communicate:
         print(f"Sent: {data}")
         return True
 
-    # 接收字节数据
+    # 接收字节数据方法
     def receive_data_main(self):
         while self.receive_data_running:
             if not self.is_open():
@@ -117,13 +117,17 @@ class Communicate:
                     msg_queue.extend(byte)
                 data = msg_queue[1:-1].decode('utf-8')
                 print(f"Received: {data}")
+                self.receive_data_running = False
+                self.receive_data_thread = None
                 return data
             except Exception as e:
                 print(f"Error receiving data: {e}")
+                self.receive_data_running = False
+                self.receive_data_thread = None
                 time.sleep(0.1)
 
 
-
+    # 接收字节数据（多线程）
     def receive_data(self):
         if not self.receive_data_running:
             self.receive_data_running = True
