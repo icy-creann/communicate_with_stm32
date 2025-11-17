@@ -5,6 +5,7 @@
 import serial
 import glob
 import time
+import threading
 
 class Communicate:
     def __init__(self, port=None, baudrate=115200):
@@ -12,6 +13,8 @@ class Communicate:
         self.port = port
         self.baudrate = baudrate
         self.ser = None
+        self.receive_data_running = False
+        self.receive_data_thread = None
 
     # 查找并打开串口
     def connect(self):
@@ -71,6 +74,11 @@ class Communicate:
     
     # 关闭串口
     def close(self):
+        if self.receive_data_running:
+            self.receive_data_running = False
+            if self.receive_data_thread and self.receive_data_thread.is_alive():
+                self.receive_data_thread.join(timeout=1)
+                print("Receive thread stopped")
         if self.is_open():
             self.ser.close()
             print("Serial port closed")
@@ -88,25 +96,42 @@ class Communicate:
         print(f"Sent: {data}")
         return True
 
+    # 接收字节数据
+    def receive_data_main(self):
+        while self.receive_data_running:
+            if not self.is_open():
+                time.sleep(1)
+                continue
+            try:
+                msg_queue = bytearray([])
+                while self.receive_data_running:
+                    byte = self.ser.read(1)
+                    if byte == b'\xAA':     # 起始字节
+                        msg_queue.extend(byte)
+                        break
+                while self.receive_data_running:
+                    byte = self.ser.read(1)
+                    if byte == b'\xBB':     # 结束字节
+                        msg_queue.extend(byte)
+                        break
+                    msg_queue.extend(byte)
+                data = msg_queue[1:-1].decode('utf-8')
+                print(f"Received: {data}")
+                return data
+            except Exception as e:
+                print(f"Error receiving data: {e}")
+                time.sleep(0.1)
+
+
 
     def receive_data(self):
-        if not self.is_open():
-            return False
-        msg_queue = bytearray([])
-        while True:
-            byte = self.ser.read(1)
-            if byte == b'\xAA':     # 起始字节
-                msg_queue.extend(byte)
-                break
-        while True:
-            byte = self.ser.read(1)
-            if byte == b'\xBB':     # 结束字节
-                msg_queue.extend(byte)
-                break
-            msg_queue.extend(byte)
-        data = msg_queue[1:-1].decode('utf-8')
-        print(f"Received: {data}")
-        return data
+        if not self.receive_data_running:
+            self.receive_data_running = True
+            self.receive_data_thread = threading.Thread(target=self.receive_data_main)
+            self.receive_data_thread.daemon = True
+            self.receive_data_thread.start()
+
+
 
 
 
@@ -115,8 +140,9 @@ if __name__ == "__main__":
     try:
         if communicate.connect():    #连接ttyUSB设备
             communicate.set_port()   #设置串口参数
+
             while True:
-                data = communicate.receive_data()   # 接收数据
+                data = communicate.receive_data()  #接收数据
                 communicate.send_data("Hello, STM32!")  #发送数据
                 time.sleep(0.5)
     except KeyboardInterrupt:
