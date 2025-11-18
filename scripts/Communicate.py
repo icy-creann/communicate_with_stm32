@@ -15,6 +15,7 @@ class Communicate:
         self.ser = None
         self.receive_data_running = False
         self.receive_data_thread = None
+        self.receive_data_val = None
 
     # 查找并打开串口
     def connect(self):
@@ -119,22 +120,27 @@ class Communicate:
                 print(f"Received: {data}")
                 self.receive_data_running = False
                 self.receive_data_thread = None
-                return data
+                self.receive_data_val = data
+                return True
             except Exception as e:
                 print(f"Error receiving data: {e}")
                 self.receive_data_running = False
                 self.receive_data_thread = None
+                self.receive_data_val = None
                 time.sleep(0.1)
 
 
     # 接收字节数据（多线程）
     def receive_data(self):
+        data = self.receive_data_val
         if not self.receive_data_running:
             self.receive_data_running = True
             self.receive_data_thread = threading.Thread(target=self.receive_data_main)
             self.receive_data_thread.daemon = True
             self.receive_data_thread.start()
-
+            data = self.receive_data_val
+            self.receive_data_val = None
+        return data
 
 
 
@@ -147,6 +153,8 @@ if __name__ == "__main__":
 
             while True:
                 data = communicate.receive_data()  #接收数据
+                if data:
+                    print(f"Received_data: {data}")
                 communicate.send_data("Hello, STM32!")  #发送数据
                 time.sleep(0.5)
     except KeyboardInterrupt:
