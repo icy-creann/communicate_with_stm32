@@ -12,6 +12,8 @@ find_package(catkin REQUIRED COMPONENTS
   rosmsg
   rospy
   std_msgs
+  message_generation
+  message_runtime
 )
 
 ## System dependencies are found with CMake's conventions
@@ -116,7 +118,7 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+  include
   ${catkin_INCLUDE_DIRS}
 )
 
@@ -204,3 +206,12 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+## Build Communicate implementation as a library and link it into the executable
+add_library(communicate_lib src/my_usb.cpp)
+target_include_directories(communicate_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(communicate_lib PUBLIC ${catkin_LIBRARIES} -lpthread -lboost_system)
+
+add_executable(communicate_node src/communicate.cpp)
+target_link_libraries(communicate_node communicate_lib ${catkin_LIBRARIES})
+

@@ -18,17 +18,23 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <regex>
-#include <string>
+
 
 using namespace std;        // IO 服务，用于处理异步操作
 using namespace boost::asio;
 using namespace boost::placeholders;
 
-class MYUART{
+class Communicate{
 public:
+    Communicate();
     std::vector<std::string> scanSerialDevices();
     void scan_usb();
-    void receive_usb();
+    bool connect(const std::string& port, int baudrate);
+    bool connect();
+    bool is_open() const;
+    void close();
+    std::string receive_usb();
+    void receive_usb_main();
     bool send_usb(const float* data, size_t data_size); 
     bool send_usb_string(const std::string& data);
     float getArrayElement(int index) const;
@@ -58,6 +64,13 @@ private:
     float txData[3];
     //中间数据
     std::vector<float> result;
+
+    // 接收线程相关
+    static std::thread receive_thread;
+    static std::atomic<bool> receive_data_running;
+    static std::string receive_data_val;
+    static std::mutex receive_mutex;
+    static std::condition_variable receive_cv;
 
 };
 
